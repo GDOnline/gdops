@@ -4,7 +4,7 @@
 Geometry Dash Online Private Server
 
 Developed by: Verlemion
-Tested by: EndmaN, Zimnior12, Pooshnya, BoyOfTheCones, Monstahhh
+Tested by: EndmaN, Zimnior12, Pooshnya, BoyOfTheCones, Monstahhh and many others!
 
 Game version: 2.1
 
