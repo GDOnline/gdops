@@ -34,7 +34,7 @@ switch ($type) {
 		break;
 
 	case 'relative':
-		$users = Leaderboards::get_relative_top($accountID);
+		$users = Leaderboards::get_relative_top($accountID == '' ? $udid : $accountID);
 		$max = 10;
 		break;
 

@@ -274,7 +274,7 @@ class Users {
 	function create_new($udid, $accountID = 0) {
 		include 'settings.php';
 
-		$q = $db->prepare("INSERT INTO opsUsers (udid, accountID) VALUES (:u, :a)");
+		$q = $db->prepare("REPLACE INTO opsUsers (udid, accountID) VALUES (:u, :a)");
 		$q->execute([
 			':u' => $udid,
 			':a' => $accountID
