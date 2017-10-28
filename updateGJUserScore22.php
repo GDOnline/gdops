@@ -39,6 +39,7 @@ if ($accountID != '') {
 		exit('-1');
 
 	$userID = Users::get_by_account($accountID)['userID'];
+    Users::update_udid($userID, $udid);
 } else {
 	if (!blank($udid))
 		die('-1');

@@ -22,7 +22,7 @@ $featured = unparty($_POST["feature"]);
 $levelID = unparty($_POST["levelID"]);
 
 if (Moderation::is_admin($accountID)) {
-	Moderation::rate($levelID, $stars, $featured);
+	Moderation::rate($accountID, $levelID, $stars, $featured);
 	die('1');
 } else {
     Moderation::suggest($accountID, $levelID, $stars, $isFeatured == null ? 0 : 1);

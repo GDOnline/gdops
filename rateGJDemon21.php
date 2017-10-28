@@ -25,7 +25,7 @@ if (!Moderation::is_mod_or_admin($accountID))
 	die('-2');
 
 if (Moderation::is_admin($accountID)) {
-	Moderation::rate_demon($levelID, $rating);
+	Moderation::rate_demon($accountID, $levelID, $rating);
 	die('1');
 } else {
     Moderation::suggest_demon($accountID, $levelID, $rating);

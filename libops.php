@@ -33,6 +33,10 @@ function oplog(...$data) {
     return;
 }
 
+function adminLog(...$data) {
+    file_put_contents('admin-logs.txt', implode(' ', $data) . "\n", FILE_APPEND);
+}
+
 function makeTime($timestamp) {
 $ts = $timestamp;
 $cts = time();
@@ -1052,7 +1056,7 @@ class Moderation {
 		}
 	}
 
-	function rate($levelID, $stars, $featured) {
+	function rate($accountID, $levelID, $stars, $featured) {
 		include "settings.php";
 
 		if ($stars == 10)
@@ -1069,6 +1073,8 @@ class Moderation {
 			':l' => $levelID,
 			':d' => Moderation::extract_diff_from_stars($stars)
 		]);
+
+		adminLog(Accounts::get_by_id($accountID)['userName'], 'has just rated', $levelID);
 	}
 
 	function suggest($accountID, $levelID, $stars, $isFeatured) {
@@ -1078,11 +1084,13 @@ class Moderation {
         $q->execute([':a' => $accountID, ':l' => $levelID, ':s' => $stars, ':i' => $isFeatured]);
     }
 
-	function rate_demon($levelID, $r) {
+	function rate_demon($accountID, $levelID, $r) {
 		include "settings.php";
 
 		$q = $db->prepare("UPDATE opsLevels SET demonType = :d WHERE levelID = :l");
 		$q->execute([':d' => Levels::make_demon($r), ':l' => $levelID]);
+
+        adminLog(Accounts::get_by_id($accountID)['userName'], 'has just rated demon', $levelID);
 	}
 
     function suggest_demon($accountID, $levelID, $r) {
@@ -1090,6 +1098,15 @@ class Moderation {
 
         $q = $db->prepare("REPLACE INTO opsLevelRequests (accountID, levelID, stars, isFeatured, isDemon, demonType) VALUES (:a, :l, 10, 0, 1, :t)");
         $q->execute([':a' => $accountID, ':l' => $levelID, ':t' => Levels::make_demon($r)]);
+    }
+
+    function get_requests() {
+        include "settings.php";
+
+        $q = $db->prepare("SELECT * FROM opsLevelRequests");
+        $q->execute();
+
+        return $q->fetchAll();
     }
 }
 
