@@ -163,7 +163,7 @@ switch ($type) {
 		break;
 
 	case 13:
-		$levels = Levels::get_by_friends('');
+		$levels = Levels::get_by_friends($accountID);
 		break;
 
 	case 10:

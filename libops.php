@@ -398,9 +398,37 @@ class Users {
 
 class Anticheat {
 	function check_values($userID, $stars, $coins, $userCoins, $demons) {
-		//TODO
+		$maxStars = 187;
+		$maxCoins = 63;
+		$maxUserCoins = 0;
+		$maxDemons = 3;
 
-		return true;
+		$levels = Levels::get_star_rated();
+
+		foreach ($levels as $l) {
+		    $maxStars += $l['stars'];
+
+		    if ($l['levelDifficulty'] == 50 && $l['isDemon'] == 1)
+		        $maxDemons++;
+
+		    if ($l['isVerified'])
+		        $maxUserCoins += $l['coins'];
+        }
+
+        $mappacks = MapPacks::get();
+
+		foreach ($mappacks as $m) {
+            $maxStars += $m['packStars'];
+            $maxCoins += $m['packCoins'];
+        }
+
+		if ($stars > $maxStars || $coins > $maxCoins || $userCoins > $maxUserCoins || $demons > $maxDemons) {
+		    $q = $db->prepare("REPLACE INTO opsBannedUsers (userID) VALUES (:u)");
+		    $q->execute([':u' => $userID]);
+
+		    return false;
+        } else
+            return true;
 	}
 }
 
@@ -836,8 +864,21 @@ class Levels {
 	}
 
 	function get_by_friends($accountID) {
-		// TODO
-		return array();
+        include "settings.php";
+
+		$q = $db->prepare("SELECT * FROM opsFriends WHERE accountID = :a");
+		$q->execute([':a' => $accountID]);
+
+		$r = $q->fetchAll();
+
+		$levels = array();
+
+		for ($i = 0; $i < count($r); $i++) {
+		    foreach (Levels::get_by_user(Users::get_by_account($r[$i]['targetAccountID'])['userID']) as $l)
+		        array_push($levels, $l);
+        }
+
+        return $levels;
 	}
 
 	function remove($accountID, $levelID) {
@@ -1581,48 +1622,52 @@ class UserRewards {
 
         $chk = xorchar(base64_decode(substr($chk, 5)), 59182);
 
-        $user = Users::get_by_udid($udid);
+        if ($accountID != '0')
+            $user = Users::get_by_account($accountID);
+        else
+            $user = Users::get_by_udid($udid);
 
-        $sTimeLeft = 0;
-        $bTimeLeft = 0;
+        $co = 0;
+        $bo = 0;
+        $ct = 0;
+        $bt = 0;
 
-        $c = 0;
-        $b = 0;
-
-        $q = $db->prepare("SELECT * FROM opsUserRewards WHERE userID = :u AND type = 'chest1'");
+        $q = $db->prepare("SELECT * FROM opsUserChests WHERE userID = :u");
         $q->execute([':u' => $user['userID']]);
 
-        if ($q->rowCount() == 0) {
-            $q = $db->prepare("INSERT INTO opsUserRewards (userID, getTime, type) VALUES (:u, :t, 'chest1')");
-            $q->execute([':u' => $user['userID'], ':t' => time() + 3600]);
-        } else {
+        if ($q->rowCount() > 0) {
             $r = $q->fetch(2);
 
-            if (time() - $r['getTime'] > 3599) {
-                $q = $db->prepare("UPDATE opsUserRewards SET getTime = :t WHERE userID = :u AND type = 'chest1'");
-                $q->execute([':u' => $user['userID'], ':t' => time() + 3600]);
+            $ct = time() - $r['smallChestTime'];
+            $bt = time() - $r['bigChestTime'];
 
-                $c = $r['special'];
-            } else
-                $sTimeLeft = $r['getTime'] - time();
+            if ($ct >= 3600)
+                $ct = 0;
+            else
+                $ct = 3600 - $ct;
+
+            if ($bt >= 12800)
+                $bt = 0;
+            else
+                $bt = 12800 - $bt;
+
+            $co = $r['smallChestOpened'];
+            $bo = $r['bigChestOpened'];
+        } else {
+            $q = $db->prepare("INSERT INTO opsUserChests (userID) VALUES (:u)");
+            $q->execute([':u' => $user['userID']]);
         }
 
-        $q = $db->prepare("SELECT * FROM opsUserRewards WHERE userID = :u AND type = 'chest2'");
-        $q->execute([':u' => $user['userID']]);
-
-        if ($q->rowCount() == 0) {
-            $q = $db->prepare("INSERT INTO opsUserRewards (userID, getTime, type) VALUES (:u, :t, 'chest2')");
-            $q->execute([':u' => $user['userID'], ':t' => time() + 12800]);
-        } else {
-            $r = $q->fetch(2);
-
-            if (time() - $r['getTime'] > 12799) {
-                $q = $db->prepare("UPDATE opsUserRewards SET getTime = :t WHERE userID = :u AND type = 'chest2'");
-                $q->execute([':u' => $user['userID'], ':t' => time() + 12800]);
-
-                $b = $r['special'];
-            } else
-                $bTimeLeft = $r['getTime'] - time();
+        if ($rewardType == 1) {
+            $q = $db->prepare("UPDATE opsUserChests SET smallChestOpened = :s, smallChestTime = :t WHERE userID = :u");
+            $q->execute([':s' => $co + 1, ':t' => time(), ':u' => $user['userID']]);
+            $co += 1;
+            $ct = 3600;
+        } else if ($rewardType == 2) {
+            $q = $db->prepare("UPDATE opsUserChests SET bigChestOpened = :s, bigChestTime = :t WHERE userID = :u");
+            $q->execute([':s' => $bo + 1, ':t' => time(), ':u' => $user['userID']]);
+            $bo += 1;
+            $bt = 12800;
         }
 
         $tmp = array(
@@ -1631,34 +1676,24 @@ class UserRewards {
             $chk,
             $udid,
             $accountID,
-            $sTimeLeft,
+            $ct,
             implode(',', array(
                 random_int($small['min']['orbs'], $small['max']['orbs']),
                 random_int($small['min']['diamonds'], $small['max']['diamonds']),
                 random_int($small['min']['shards'], $small['max']['shards']),
                 random_int($small['min']['other'], $small['max']['other'])
             )),
-            $c,
-            $bTimeLeft,
+            $co,
+            $bt,
             implode(',', array(
                 random_int($big['min']['orbs'], $big['max']['orbs']),
                 random_int($big['min']['diamonds'], $big['max']['diamonds']),
                 random_int($big['min']['shards'], $big['max']['shards']),
                 random_int($big['min']['other'], $big['max']['other'])
             )),
-            $b,
+            $bo,
             $rewardType
         );
-
-        if ($rewardType == 1) {
-            $q = $db->prepare("UPDATE opsUserRewards SET special = special + 1 WHERE userID = :u AND type = 'chest1'");
-            $c++;
-        } else if ($rewardType == 2) {
-            $q = $db->prepare("UPDATE opsUserRewards SET special = special + 1 WHERE userID = :u AND type = 'chest2'");
-            $b++;
-        }
-
-        $q->execute([':u' => $user['userID']]);
 
         return implode(':', $tmp);
     }

@@ -51,7 +51,7 @@ if ($accountID != '') {
 
 if ($userID != '') {
 	if (!Anticheat::check_values($userID, $stars, $coins, $userCoins, $demons))
-		die('-1');
+		die($userID);
 
 	$sql_notcreated = <<<SQText
 INSERT INTO opsUserScores (

@@ -19,5 +19,9 @@ if ($accountID != '0') {
         die('-1');
 }
 
-$string = base64_encode(xorchar(UserRewards::load_chests($accountID, $udid, $chk, $rewardType), 59182));
+$str = UserRewards::load_chests($accountID, $udid, $chk, $rewardType);
+
+//echo $str;
+
+$string = base64_encode(xorchar($str, 59182));
 exit('AAAAA' . $string . '|' . sha1($string . 'pC26fpYaQCtg'));
