@@ -5,15 +5,18 @@ require_once 'anubis.php';
 
 $accountID = unparty($_POST["accountID"]);
 $gjp = unparty($_POST["gjp"]);
+$udid = unparty($_POST['udid']);
 
-if (!blank($accountID, $gjp))
-	die('-1');
+if ($accountID != '') {
+    if (!blank($accountID, $gjp))
+        die('-1');
 
-if (!Accounts::verify_gjp($accountID, $gjp))
-	die('-1');
+    if (!Accounts::verify_gjp($accountID, $gjp))
+        die('-1');
 
-if (Accounts::is_disabled($accountID))
-	die('-1');
+    if (Accounts::is_disabled($accountID))
+        die('-1');
+}
 
 if (!IPLimits::limit_levels($_SERVER['REMOTE_ADDR']))
     die('-1');
@@ -36,7 +39,10 @@ $levelVersion = unparty($_POST["levelVersion"]);
 $levelLength = unparty($_POST["levelLength"]);
 $requestedStars = unparty($_POST["requestedStars"]);
 
-$u = Users::get_by_account($accountID);
+if ($accountID != '')
+    $u = Users::get_by_account($accountID);
+else
+    $u = Users::get_by_udid($udid);
 
 $need_id_replace = $levelID != '0' ? ', levelID' : '';
 $nir = $levelID != '0' ? ', :levelID' : '';
