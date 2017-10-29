@@ -38,6 +38,12 @@ $coins = unparty($_POST["coins"]);
 $levelVersion = unparty($_POST["levelVersion"]);
 $levelLength = unparty($_POST["levelLength"]);
 $requestedStars = unparty($_POST["requestedStars"]);
+$unlisted = unparty($_POST['unlisted']);
+
+if ($unlisted != '1')
+    $unlisted = 0;
+else
+    $unlisted = 1;
 
 if ($accountID != '')
     $u = Users::get_by_account($accountID);
@@ -48,7 +54,7 @@ $need_id_replace = $levelID != '0' ? ', levelID' : '';
 $nir = $levelID != '0' ? ', :levelID' : '';
 
 $sql = <<<SQLText
-REPLACE INTO opsLevels (levelName, userID, levelVersion, levelDesc, coins, objects, isTwoPlayer, customSongID, song, extraString, password, levelLength, levelInfo, originalID, gameVersion, requestedStars, uploadTime, updateTime$need_id_replace) VALUES (:levelName, :userID, :levelVersion, :levelDesc, :coins, :objects, :twoPlayer, :songID, :audioTrack, :extraString, :password, :levelLength, :levelInfo, :original, :gameVersion, :requestedStars, :uploadTime, :updateTime$nir)
+REPLACE INTO opsLevels (levelName, userID, levelVersion, levelDesc, coins, objects, isTwoPlayer, customSongID, song, extraString, password, levelLength, levelInfo, originalID, gameVersion, requestedStars, uploadTime, updateTime$need_id_replace, isUnlisted) VALUES (:levelName, :userID, :levelVersion, :levelDesc, :coins, :objects, :twoPlayer, :songID, :audioTrack, :extraString, :password, :levelLength, :levelInfo, :original, :gameVersion, :requestedStars, :uploadTime, :updateTime$nir, :unlisted)
 SQLText;
 
 $data = [
@@ -69,7 +75,8 @@ $data = [
 	':gameVersion' => $gameVersion,
 	':requestedStars' => $requestedStars,
 	':uploadTime' => time(),
-	':updateTime' => time()
+	':updateTime' => time(),
+    ':unlisted' => $unlisted
 ];
 
 if ($nir != '')
