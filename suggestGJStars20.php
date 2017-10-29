@@ -25,6 +25,11 @@ if (Moderation::is_admin($accountID)) {
 	Moderation::rate($accountID, $levelID, $stars, $featured);
 	die('1');
 } else {
-    Moderation::suggest($accountID, $levelID, $stars, $isFeatured == null ? 0 : 1);
+    if ($featured == '')
+        $isFeatured = 0;
+    else
+        $isFeatured = 1;
+
+    Moderation::suggest($accountID, $levelID, $stars, $isFeatured);
     die('1');
 }
