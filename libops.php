@@ -1576,7 +1576,10 @@ class UserRewards {
 
         $chk = xorchar(base64_decode(substr($chk, 5)), 19847);
 
-        $user = Users::get_by_udid($udid);
+        if ($accountID == '0')
+            $user = Users::get_by_udid($udid);
+        else
+            $user = Users::get_by_account($accountID);
 
         $q = $db->prepare("SELECT * FROM opsUserRewards WHERE userID = :u AND type = 'quest'");
         $q->execute([':u' => $user['userID']]);
