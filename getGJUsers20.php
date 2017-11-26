@@ -31,4 +31,4 @@ for ($i = 0; $i < 10; $i++) {
 EOF;
 }
 
-exit("#" . count($r) . ":$page:10");
+exit("#" . count($r) . ":".($page*10).":10");

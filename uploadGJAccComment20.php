@@ -12,8 +12,10 @@ if (!blank($accountID, $gjp, $comment))
 if (!Accounts::verify_gjp($accountID, $gjp))
 	die('-1');
 
-if (AccountComments::is_banned($accountID))
-	die('-10');
+if (AccountComments::is_banned($accountID)) {
+    $r = AccountComments::get_ban_reason($accountID);
+    die('temp_0' . $r);
+}
 
 if (Accounts::is_disabled($accountID))
 	die('-1');

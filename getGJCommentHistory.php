@@ -2,21 +2,20 @@
 include 'settings.php';
 require_once 'libops.php';
 
-$levelID = unparty($_POST["levelID"]);
-$page = unparty($_POST["page"]);
-$userID = unparty($_POST["userID"]);
-$mode = unparty($_POST["mode"]);
+$page = unparty($_POST['page']);
+$mode = unparty($_POST['mode']);
+$userID = unparty($_POST['userID']);
 $count = unparty($_POST['count']);
 
 if ($count == '')
     $count = 10;
 
-$comments = array();
-
-if ($mode == "0")
-    $comments = Comments::get_in_level($levelID, 'uploadTime');
+if ($mode == 0)
+    $mode = 'uploadTime';
 else
-    $comments = Comments::get_in_level($levelID, 'likes');
+    $mode = 'likes';
+
+$comments = Comments::get_by_user($userID, $mode);
 
 if (count($comments) == 0)
     die('-2');
@@ -48,6 +47,8 @@ for ($i = 0; $i < $count; $i++) {
 
     echo "2~"
         .$c["comment"]
+        ."~1~"
+        .$c['levelID']
         ."~3~"
         .$c["userID"]
         ."~4~"

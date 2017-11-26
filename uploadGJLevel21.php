@@ -39,6 +39,34 @@ $levelVersion = unparty($_POST["levelVersion"]);
 $levelLength = unparty($_POST["levelLength"]);
 $requestedStars = unparty($_POST["requestedStars"]);
 $unlisted = unparty($_POST['unlisted']);
+$ldm = unparty($_POST['ldm']);
+
+if (strlen($levelName) > 20)
+    die('-1');
+
+if ($levelID < 0)
+    die('-1');
+
+if ($songID < 0)
+    die('-1');
+
+if ($twoPlayer > 1 || $twoPlayer < 0)
+    die('-1');
+
+if ($objects < 0)
+    die('-1');
+
+if ($coins > 3 || $coins < 0)
+    die('-1');
+
+if ($levelVersion < 0)
+    die('-1');
+
+if ($requestedStars > 10 || $requestedStars < 0)
+    die('-1');
+
+if ($levelLength > 4 || $levelLength < 0)
+    die('-1');
 
 if ($unlisted != '1')
     $unlisted = 0;
@@ -50,37 +78,111 @@ if ($accountID != '')
 else
     $u = Users::get_by_udid($udid);
 
-$need_id_replace = $levelID != '0' ? ', levelID' : '';
-$nir = $levelID != '0' ? ', :levelID' : '';
+if ($levelID == '0') {
 
-$sql = <<<SQLText
-REPLACE INTO opsLevels (levelName, userID, levelVersion, levelDesc, coins, objects, isTwoPlayer, customSongID, song, extraString, password, levelLength, levelInfo, originalID, gameVersion, requestedStars, uploadTime, updateTime$need_id_replace, isUnlisted) VALUES (:levelName, :userID, :levelVersion, :levelDesc, :coins, :objects, :twoPlayer, :songID, :audioTrack, :extraString, :password, :levelLength, :levelInfo, :original, :gameVersion, :requestedStars, :uploadTime, :updateTime$nir, :unlisted)
+    $sql = <<<SQLText
+INSERT INTO opsLevels (levelName,
+userID,
+levelVersion,
+levelDesc,
+coins,
+objects,
+isTwoPlayer,
+customSongID,
+song,
+extraString,
+password,
+levelLength,
+levelInfo, 
+originalID, 
+gameVersion, 
+requestedStars, 
+uploadTime, 
+updateTime,
+isUnlisted,
+ldm) VALUES (:levelName, 
+:userID, 
+:levelVersion, 
+:levelDesc, 
+:coins, 
+:objects, 
+:twoPlayer, 
+:songID, 
+:audioTrack,
+:extraString,
+:password, 
+:levelLength, 
+:levelInfo, 
+:original, 
+:gameVersion, 
+:requestedStars, 
+:uploadTime, 
+:updateTime,
+:unlisted,
+:ldm)
 SQLText;
 
-$data = [
-	':levelName' => $levelName,
-	':userID' => $u['userID'],
-	':levelVersion' => $levelVersion,
-	':levelDesc' => $levelDesc,
-	':coins' => $coins,
-	':objects' => $objects,
-	':twoPlayer' => $twoPlayer,
-	':songID' => $songID,
-	':audioTrack' => $audioTrack,
-	':extraString' => $extraString,
-	':password' => $password,
-	':levelLength' => $levelLength,
-	':levelInfo' => $levelInfo,
-	':original' => $original,
-	':gameVersion' => $gameVersion,
-	':requestedStars' => $requestedStars,
-	':uploadTime' => time(),
-	':updateTime' => time(),
-    ':unlisted' => $unlisted
-];
+    $data = [
+        ':levelName' => $levelName,
+        ':userID' => $u['userID'],
+        ':levelVersion' => $levelVersion,
+        ':levelDesc' => $levelDesc,
+        ':coins' => $coins,
+        ':objects' => $objects,
+        ':twoPlayer' => $twoPlayer,
+        ':songID' => $songID,
+        ':audioTrack' => $audioTrack,
+        ':extraString' => $extraString,
+        ':password' => $password,
+        ':levelLength' => $levelLength,
+        ':levelInfo' => $levelInfo,
+        ':original' => $original,
+        ':gameVersion' => $gameVersion,
+        ':requestedStars' => $requestedStars,
+        ':uploadTime' => time(),
+        ':updateTime' => time(),
+        ':unlisted' => $unlisted,
+        ':ldm' => $ldm
+    ];
 
-if ($nir != '')
-	$data[':levelID'] = $levelID;
+} else {
+    $sql = <<<SQLText
+UPDATE opsLevels SET levelVersion = :levelVersion, 
+levelDesc = :levelDesc, 
+coins = :coins, 
+objects = :objects,
+customSongID = :songID,
+song = :audioTrack,
+isTwoPlayer = :twoPlayer,
+extraString = :extraString,
+password = :password,
+levelLength = :levelLength,
+levelInfo = :levelInfo,
+gameVersion = :gameVersion,
+requestedStars = :requestedStars,
+updateTime = :updateTime,
+ldm = :ldm WHERE levelID = :levelID
+SQLText;
+
+    $data = [
+        ':levelVersion' => $levelVersion,
+        ':levelDesc' => $levelDesc,
+        ':coins' => $coins,
+        ':objects' => $objects,
+        ':twoPlayer' => $twoPlayer,
+        ':songID' => $songID,
+        ':audioTrack' => $audioTrack,
+        ':extraString' => $extraString,
+        ':password' => $password,
+        ':levelLength' => $levelLength,
+        ':levelInfo' => $levelInfo,
+        ':gameVersion' => $gameVersion,
+        ':requestedStars' => $requestedStars,
+        ':updateTime' => time(),
+        ':levelID' => $levelID,
+        ':ldm' => $ldm
+    ];
+}
 
 $q = $db->prepare($sql);
 $q->execute($data);
@@ -88,9 +190,14 @@ $q->execute($data);
 $anubis = new Anubis();
 $anubis->setKey($OPS_SETTINGS['gdps']['security']['anubis_salt']);
 
-$ok = file_put_contents('data/levels/' . $db->lastInsertId() . '.level', $anubis->encrypt($levelString));
+$insertedID = $db->lastInsertId();
+
+if ($levelID != '0')
+    $insertedID = $levelID;
+
+$ok = file_put_contents('data/levels/' . $insertedID . '.level', $anubis->encrypt($levelString));
 
 if ($ok === false)
-	die('-1');
+	die('-1 (filerr)');
 
-die($db->lastInsertId());
+die($insertedID);

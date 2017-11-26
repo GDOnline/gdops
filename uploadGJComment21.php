@@ -14,8 +14,10 @@ if (!Accounts::verify_gjp($accountID, $gjp))
 if (Accounts::is_disabled($accountID))
     die('-1');
 
-if (Comments::is_banned($accountID))
-    die('-10');
+if (Comments::is_banned($accountID)) {
+    $r = Comments::get_ban_reason($accountID);
+    die('temp_0' . $r);
+}
 
 $comment = unparty($_POST["comment"]);
 $levelID = unparty($_POST["levelID"]);

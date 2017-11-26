@@ -2,7 +2,7 @@
 error_reporting(E_ERROR);
 
 function unparty($str) {
-	return str_replace(array("'", "(", ")", "~"), "", $str);
+	return str_replace(array("'", "(", ")", "~", ":", '|'), "", $str);
 }
 
 function blank(...$strs) {
@@ -402,12 +402,17 @@ class Users {
 
 class Anticheat {
 	function check_values($userID, $stars, $coins, $userCoins, $demons) {
-		$maxStars = 187;
-		$maxCoins = 63;
-		$maxUserCoins = 0;
-		$maxDemons = 3;
+	    include 'settings.php';
 
-		$levels = Levels::get_star_rated();
+		$maxStars = 200;
+		$maxCoins = 100;
+		$maxUserCoins = 10;
+		$maxDemons = 4;
+
+        $q = $db->prepare("SELECT * FROM opsLevels WHERE stars != 0 ORDER BY levelID DESC");
+        $q->execute();
+
+        $levels = $q->fetchAll();
 
 		foreach ($levels as $l) {
 		    $maxStars += $l['stars'];
@@ -417,6 +422,20 @@ class Anticheat {
 
 		    if ($l['isVerified'])
 		        $maxUserCoins += $l['coins'];
+        }
+
+        $q = $db->prepare("SELECT * FROM opsDailyLevels");
+        $q->execute();
+
+        foreach ($q->fetchAll() as $l) {
+            $lvl = Levels::get_by_id($l['levelID'])[0];
+
+            $maxStars += $lvl['stars'];
+            if ($lvl['isVerified'] == '1')
+                $maxUserCoins += $lvl['coins'];
+
+            if ($lvl['isDemon'])
+                $maxDemons += 1;
         }
 
         $mappacks = MapPacks::get();
@@ -469,6 +488,20 @@ class AccountComments {
 
 		return $q->rowCount() > 0;
 	}
+
+    function get_ban_reason($accountID) {
+        include 'settings.php';
+
+        $q = $db->prepare("SELECT * FROM opsAccCommentBans WHERE accountID = :a LIMIT 1");
+        $q->execute([':a' => $accountID]);
+
+        $r = $q->fetch(2);
+
+        if ($r['reason'] == '')
+            return '';
+        else
+            return '_' . $r['reason'];
+    }
 }
 
 class Messages {
@@ -850,7 +883,7 @@ class Levels {
 		include "settings.php";
 
 		$q = $db->prepare("SELECT * FROM opsLevels WHERE stars != 0 AND isUnlisted != 1 ORDER BY levelID DESC");
-		$q->execute([':u' => $user]);
+		$q->execute();
 
 		return $q->fetchAll();
 	}
@@ -1000,6 +1033,45 @@ class Levels {
             $q->execute([':l' => $levelID, ':s' => $stars]);
         }
     }
+
+    function rate_new($levelID, $stars, $ip) {
+        include "settings.php";
+
+        $q = $db->prepare("SELECT * FROM opsIPRated WHERE udid = :ip AND levelID = :l");
+        $q->execute([':ip' => $ip, ':l' => $levelID]);
+
+        if ($q->rowCount() > 0)
+            return;
+
+        $q = $db->prepare("INSERT INTO opsIPRated (udid, levelID) VALUES (:ip, :l)");
+        $q->execute([':ip' => $ip, ':l' => $levelID]);
+
+        $q = $db->prepare("SELECT * FROM opsLevelRates WHERE levelID = :l");
+        $q->execute([':l' => $levelID]);
+
+        if ($q->rowCount() > 0) {
+            $r = $q->fetch(2);
+
+            if ($r['totalRates'] > 49) {
+                $diff = Moderation::extract_diff_from_stars($r['totalStars'] % $r['totalRates']);
+
+                if ($diff == 50 && $r['totalStars'] % $r['totalRates'] == 1)
+                    $diff = 10;
+
+                $q = $db->prepare("UPDATE levels SET levelDifficulty = :l, isDemon = 0, isAuto = 0 WHERE levelID = :l AND stars = 0");
+                $q->execute([':l' => $levelID]);
+
+                $q = $db->prepare("UPDATE opsLevelRates SET totalRates = 0, totalStars = 0 WHERE levelID = :l");
+                $q->execute([':l' => $levelID]);
+            } else {
+                $q = $db->prepare("UPDATE opsLevelRates SET totalRates = totalRates + 1, totalStars = totalStars + :s WHERE levelID = :l");
+                $q->execute([':l' => $levelID, ':s' => $stars]);
+            }
+        } else {
+            $q = $db->prepare("INSERT INTO opsLevelRates (levelID, totalRates, totalStars) VALUES (:l, 1, :s)");
+            $q->execute([':l' => $levelID, ':s' => $stars]);
+        }
+    }
 }
 
 class Moderation {
@@ -1039,15 +1111,23 @@ class Moderation {
 				return 20;
 
 			case '4':
+                return 30;
+
 			case '5':
 				return 30;
 
 			case '6':
+                return 40;
+
 			case '7':
 				return 40;
 
 			case '1':
+                return 50;
+
 			case '9':
+                return 50;
+
 			case '10':
 				return 50;
 			
@@ -1180,15 +1260,35 @@ class Leaderboards {
 
 		$users = array();
 
-		$q = $db->prepare("SELECT * FROM opsUsers LIMIT 100");
+		$q = $db->prepare("SELECT * FROM opsUsers");
 		$q->execute();
 
 		$uusers = $q->fetchAll();
 
-		foreach ($uusers as $u)
-			$users[$u['userID']] = Users::calculate_creator_points($u['userID']);
+		$q = $db->prepare("SELECT userID, stars, isFeatured, isEpic FROM opsLevels");
+		$q->execute();
 
-		arsort($users);
+		$levels = $q->fetchAll();
+
+		foreach ($uusers as $u) {
+		    $e = 0;
+
+            foreach ($levels as $l) {
+                if ($l['userID'] == $u['userID'] && $l['stars'] != 0) {
+                   $e++;
+
+                   if ($l['isFeatured'] != 0)
+                       $e++;
+
+                   if ($l['isEpic'] != 0)
+                       $e++;
+                }
+            }
+
+            $users[$u['userID']] = $e;
+        }
+
+		arsort($users, SORT_NUMERIC);
 
 		$rusers = array();
 
@@ -1227,6 +1327,19 @@ class Leaderboards {
         return $correct;
     }
 
+    function get_level_gleaderboard($levelID) {
+        include "settings.php";
+
+        $q = $db->prepare("SELECT * FROM opsPercentages WHERE levelID = :l ORDER BY percent DESC");
+        $q->execute([':l' => $levelID]);
+        $r = $q->fetchAll();
+
+        if (count($r) == 0)
+            return array();
+
+        return $r;
+    }
+
     function update_level_score($accountID, $levelID, $percent) {
         include "settings.php";
 
@@ -1261,6 +1374,26 @@ class Likes {
         $q->execute([':l' => $id]);
     }
 
+    function level_new($like, $id, $udid) {
+        include 'settings.php';
+
+        $q = $db->prepare("SELECT * FROM opsIPLiked WHERE udid = :udid AND itemID = :id AND itemType = :t");
+        $q->execute([':id' => $id, ':t' => 1, ':udid' => $udid]);
+
+        if ($q->rowCount() > 0)
+            return;
+
+        $q = $db->prepare("INSERT INTO opsIPLiked (udid, itemID, itemType) VALUES (:udid, :id, :t)");
+        $q->execute([':id' => $id, ':t' => 1, ':udid' => $udid]);
+
+        $e = '- 1';
+        if ($like == "1")
+            $e = '+ 1';
+
+        $q = $db->prepare("UPDATE opsLevels SET likes = likes $e WHERE levelID = :l");
+        $q->execute([':l' => $id]);
+    }
+
     function accComment($like, $id, $ip) {
         include 'settings.php';
 
@@ -1281,6 +1414,26 @@ class Likes {
         $q->execute([':l' => $id]);
     }
 
+    function accComment_new($like, $id, $udid) {
+        include 'settings.php';
+
+        $q = $db->prepare("SELECT * FROM opsIPLiked WHERE udid = :udid AND itemID = :id AND itemType = :t");
+        $q->execute([':id' => $id, ':t' => 3, ':udid' => $udid]);
+
+        if ($q->rowCount() > 0)
+            return;
+
+        $q = $db->prepare("INSERT INTO opsIPLiked (udid, itemID, itemType) VALUES (:udid, :id, :t)");
+        $q->execute([':id' => $id, ':t' => 3, ':udid' => $udid]);
+
+        $e = '- 1';
+        if ($like == "1")
+            $e = '+ 1';
+
+        $q = $db->prepare("UPDATE opsAccountComments SET likes = likes $e WHERE commentID = :l");
+        $q->execute([':l' => $id]);
+    }
+
     function comment($like, $id, $ip) {
         include 'settings.php';
 
@@ -1292,6 +1445,26 @@ class Likes {
 
         $q = $db->prepare("INSERT INTO opsIPLiked (IP, itemID, itemType) VALUES ('$ip', :id, :t)");
         $q->execute([':id' => $id, ':t' => 2]);
+
+        $e = '- 1';
+        if ($like == "1")
+            $e = '+ 1';
+
+        $q = $db->prepare("UPDATE opsComments SET likes = likes $e WHERE commentID = :l");
+        $q->execute([':l' => $id]);
+    }
+
+    function comment_new($like, $id, $udid) {
+        include 'settings.php';
+
+        $q = $db->prepare("SELECT * FROM opsIPLiked WHERE udid = :udid AND itemID = :id AND itemType = :t");
+        $q->execute([':id' => $id, ':t' => 2, ':udid' => $udid]);
+
+        if ($q->rowCount() > 0)
+            return;
+
+        $q = $db->prepare("INSERT INTO opsIPLiked (udid, itemID, itemType) VALUES (:udid, :id, :t)");
+        $q->execute([':id' => $id, ':t' => 2, ':udid' => $udid]);
 
         $e = '- 1';
         if ($like == "1")
@@ -1323,14 +1496,52 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET likes = likes + 1, lr = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET likes = likes + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
         } else {
             $q = $db->prepare("INSERT INTO opsIPLimits (likes, lr, IP) VALUES (1, :t, :ip)");
             $q->execute([':t' => time(), ':ip' => $IP]);
+
+            return true;
+        }
+    }
+
+    function limit_likes_new($udid, $accountID, $uuid) {
+        include 'settings.php';
+
+        $limits = $OPS_SETTINGS['gdps']['limits'];
+
+        $q = $db->prepare("SELECT * FROM opsIPLimits WHERE udid = :udid");
+        $q->execute([':udid' => $udid]);
+
+        if ($q->rowCount() > 0) {
+            $r = $q->fetch(2);
+
+            if ($r['userID'] != $uuid) {
+                if ($r['accountID'] != $accountID)
+                    return false;
+            }
+
+            if ($r['likes'] >= $limits['likes']) {
+                if (time() - $r['lr'] > 43200) {
+                    $q = $db->prepare("UPDATE opsIPLimits SET likes = 0, lr = :t WHERE udid = :udid");
+                    $q->execute([':t' => time(), ':udid' => $udid]);
+
+                    return true;
+                } else
+                    return false;
+            } else {
+                $q = $db->prepare("UPDATE opsIPLimits SET likes = likes + 1 WHERE udid = :udid");
+                $q->execute([':udid' => $udid]);
+
+                return true;
+            }
+        } else {
+            $q = $db->prepare("INSERT INTO opsIPLimits (likes, lr, udid, userID, accountID) VALUES (1, :t, :udid, :uuid, :accountID)");
+            $q->execute([':t' => time(), ':udid' => $udid, ':uuid' => $uuid, ':accountID' => $accountID]);
 
             return true;
         }
@@ -1356,8 +1567,8 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET comments = comments + 1, cr = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET comments = comments + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
@@ -1389,8 +1600,8 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET accountComments = accountComments + 1, ar = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET accountComments = accountComments + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
@@ -1422,8 +1633,8 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET messages = messages + 1, mr = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET messages = messages + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
@@ -1455,8 +1666,8 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET levels = levels + 1, ler = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET levels = levels + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
@@ -1488,14 +1699,52 @@ class IPLimits {
                 } else
                     return false;
             } else {
-                $q = $db->prepare("UPDATE opsIPLimits SET rates = rates + 1, rr = :t WHERE IP = :ip");
-                $q->execute([':t' => time(), ':ip' => $IP]);
+                $q = $db->prepare("UPDATE opsIPLimits SET rates = rates + 1 WHERE IP = :ip");
+                $q->execute([':ip' => $IP]);
 
                 return true;
             }
         } else {
             $q = $db->prepare("INSERT INTO opsIPLimits (rates, rr, IP) VALUES (1, :t, :ip)");
             $q->execute([':t' => time(), ':ip' => $IP]);
+
+            return true;
+        }
+    }
+
+    function limit_rates_new($udid, $accountID, $uuid) {
+        include 'settings.php';
+
+        $limits = $OPS_SETTINGS['gdps']['limits'];
+
+        $q = $db->prepare("SELECT * FROM opsIPLimits WHERE udid = :ip");
+        $q->execute([':ip' => $udid]);
+
+        if ($q->rowCount() > 0) {
+            $r = $q->fetch(2);
+
+            if ($r['userID'] != $uuid) {
+                if ($r['accountID'] != $accountID)
+                    return false;
+            }
+
+            if ($r['rates'] >= $limits['rates']) {
+                if (time() - $r['rr'] > 43200) {
+                    $q = $db->prepare("UPDATE opsIPLimits SET rates = 0, rr = :t WHERE udid = :ip");
+                    $q->execute([':t' => time(), ':ip' => $udid]);
+
+                    return true;
+                } else
+                    return false;
+            } else {
+                $q = $db->prepare("UPDATE opsIPLimits SET rates = rates + 1 WHERE udid = :ip");
+                $q->execute([':ip' => $udid]);
+
+                return true;
+            }
+        } else {
+            $q = $db->prepare("INSERT INTO opsIPLimits (rates, rr, udid) VALUES (1, :t, :ip)");
+            $q->execute([':t' => time(), ':ip' => $udid]);
 
             return true;
         }
@@ -1508,6 +1757,15 @@ class Comments {
 
         $q = $db->prepare("SELECT * FROM opsComments WHERE levelID = :l ORDER BY $mode DESC");
         $q->execute([':l' => $levelID]);
+
+        return $q->fetchAll();
+    }
+
+    function get_by_user($userID, $mode) {
+        include 'settings.php';
+
+        $q = $db->prepare("SELECT * FROM opsComments WHERE userID = :u ORDER BY $mode DESC");
+        $q->execute([':u' => $userID]);
 
         return $q->fetchAll();
     }
@@ -1535,11 +1793,31 @@ class Comments {
         return $q->rowCount() > 0;
     }
 
-    function delete($commentID, $accountID) {
+    function get_ban_reason($accountID) {
         include 'settings.php';
 
-        $q = $db->prepare("DELETE FROM opsComments WHERE commentID = :a AND userID = :u");
-        $q->execute([':a' => $commentID, ':u' => Users::get_by_account($accountID)['userID']]);
+        $q = $db->prepare("SELECT * FROM opsCommentBans WHERE accountID = :a LIMIT 1");
+        $q->execute([':a' => $accountID]);
+
+        $r = $q->fetch(2);
+
+        if ($r['reason'] == '')
+            return '';
+        else
+            return '_' . $r['reason'];
+    }
+
+    function delete($commentID, $accountID)
+    {
+        include 'settings.php';
+
+        if (Moderation::is_admin($accountID)) {
+            $q = $db->prepare("DELETE FROM opsComments WHERE commentID = :a");
+            $q->execute([':a' => $commentID]);
+        } else {
+            $q = $db->prepare("DELETE FROM opsComments WHERE commentID = :a AND userID = :u");
+            $q->execute([':a' => $commentID, ':u' => Users::get_by_account($accountID)['userID']]);
+        }
     }
 }
 

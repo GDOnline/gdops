@@ -20,7 +20,17 @@ $epic = unparty(htmlspecialchars($_POST["epic"]));
 $demonFilter = unparty(htmlspecialchars($_POST["demonFilter"]));
 $gauntlet = unparty(htmlspecialchars($_POST["gauntlet"]));
 
+$local = unparty($_POST['local']);
+
+$uncompleted = unparty($_POST['uncompleted']);
+$completedLevels = unparty($_POST['completedLevels']);
+
 $conds = '';
+
+if ($local == '1') {
+    $userID = Users::get_by_account($accountID)['userID'];
+    $str = $userID;
+}
 
 if ($gauntlet != null) {
     $q = $db->prepare("SELECT * FROM opsGauntlets WHERE gauntletID = :g");
@@ -53,7 +63,7 @@ if ($gauntlet != null) {
         $users .= $u["userID"].":".$us["userName"].":".$u["accountID"];
     }
 
-    echo "#$users##" . count($levels) . ":$page:10#" . Levels::generate_hash_for_get($lIDs);
+    echo "#$users##" . count($levels) . ":".($page*10).":10#" . Levels::generate_hash_for_get($lIDs);
     exit;
 }
 
@@ -198,4 +208,4 @@ for ($i = 0; $i < 10; $i++) {
 	$users .= $u["userID"].":".$us["userName"].":".$u["accountID"];
 }
 
-echo "#$users##" . count($levels) . ":$page:10#" . Levels::generate_hash_for_get($lIDs);
+echo "#$users##" . count($levels) . ":".($page*10).":10#" . Levels::generate_hash_for_get($lIDs);

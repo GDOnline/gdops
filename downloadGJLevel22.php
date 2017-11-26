@@ -6,8 +6,12 @@ require_once 'anubis.php';
 $levelID = unparty($_POST["levelID"]);
 $dailyID = 0;
 
-if ($levelID == '-1') {
-    $q = $db->prepare("SELECT * FROM opsDailyLevels ORDER BY dailyID DESC LIMIT 1");
+if ($levelID == '-1' || $levelID == '-2') {
+    if ($levelID == '-1')
+        $q = $db->prepare("SELECT * FROM opsDailyLevels WHERE isWeekly = 0 ORDER BY dailyID DESC LIMIT 1");
+    else
+        $q = $db->prepare("SELECT * FROM opsDailyLevels WHERE isWeekly = 1 ORDER BY dailyID DESC LIMIT 1");
+
     $q->execute();
     $r = $q->fetch(2);
 
@@ -27,7 +31,7 @@ if ($un === false)
 
 $levelString = $anubis->decrypt($un);
 
-echo "1:".$result["levelID"].":2:".$result["levelName"].":3:".$result["levelDesc"].":4:".$levelString.":5:".$result["levelVersion"].":6:".$result["userID"].":8:10:9:".$result["levelDifficulty"].":10:".$result["downloads"].":11:1:12:".$result["song"].":13:".$result["gameVersion"].":14:".$result["likes"].":17:".$result["isDemon"].":43:".$result["demonType"].":25:".$result["isAuto"].":18:".$result["stars"].":19:".$result["isFeatured"].":42:".$result["isEpic"].":45:0:15:".$result["levelLength"].":30:".$result["originalID"].":31:0:28:".makeTime($result["uploadTime"]). ":29:".makeTime($result["updateTime"]). ":35:".$result["customSongID"].":36:".$result["extraString"].":37:".$result["coins"].":38:".$result["isVerified"].":39:".$result["requestedStars"].":46:1:47:2:27:" . Levels::encode_password($result["password"]);
+echo "40:".$result['ldm'].":1:".$result["levelID"].":2:".$result["levelName"].":3:".$result["levelDesc"].":4:".$levelString.":5:".$result["levelVersion"].":6:".$result["userID"].":8:10:9:".$result["levelDifficulty"].":10:".$result["downloads"].":11:1:12:".$result["song"].":13:".$result["gameVersion"].":14:".$result["likes"].":17:".$result["isDemon"].":43:".$result["demonType"].":25:".$result["isAuto"].":18:".$result["stars"].":19:".$result["isFeatured"].":42:".$result["isEpic"].":45:0:15:".$result["levelLength"].":30:".$result["originalID"].":31:0:28:".makeTime($result["uploadTime"]). ":29:".makeTime($result["updateTime"]). ":35:".$result["customSongID"].":36:".$result["extraString"].":37:".$result["coins"].":38:".$result["isVerified"].":39:".$result["requestedStars"].":46:1:47:2:27:" . Levels::encode_password($result["password"]);
 
 if ($dailyID != 0)
     echo ':41:' . $dailyID;

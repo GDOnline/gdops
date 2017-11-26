@@ -16,7 +16,7 @@ if (!Accounts::verify_gjp($accountID, $gjp))
 if (Accounts::is_disabled($accountID))
 	die('-1');
 
-$q = $db->prepare("DELETE FROM opsAccountComments WHERE commentID = :c");
-$q->execute([':c' => $commentID]);
+$q = $db->prepare("DELETE FROM opsAccountComments WHERE commentID = :c AND accountID = :a");
+$q->execute([':c' => $commentID, ':a' => $accountID]);
 
 die('1');

@@ -21,9 +21,39 @@ for ($i = 0; $i < 10; $i++) {
 	if ($i != 0)
 		echo '|';
 
-	echo <<<LOLXD
-2~{$c["comment"]}~3~{$c["accountID"]}~4~{$c["likes"]}~5~0~7~{$c['isSpam']}~9~{$makeTime($c["uploadTime"])}~6~{$c["commentID"]}
-LOLXD;
+    $modType = 0;
+    $modColor = "255,255,255";
+
+    $accountID = Users::get_by_id($c['userID'])['accountID'];
+    if (Moderation::is_mod_or_admin($accountID)) {
+        if (Moderation::is_admin($accountID)) {
+            $modType = 2;
+            $modColor = "238,0,255";
+        } else if (Moderation::is_mod($accountID)) {
+            $modType = 1;
+            $modColor = "8,255,0";
+        }
+    }
+
+    echo "2~"
+        .$c["comment"]
+        ."~3~"
+        .$c["userID"]
+        ."~4~"
+        .$c["likes"]
+        ."~7~"
+        .$c['isSpam'];
+
+    if ($modType != 0) {
+        echo "~11~"
+            .$modType
+            ."~12~"
+            .$modColor;
+    }
+    echo "~9~"
+        .makeTime($c["uploadTime"])
+        ."~6~"
+        .$c["commentID"];
 }
 
-echo "#" . count($cs) . ":$page:10";
+echo "#" . count($cs) . ":".($page*10).":10";

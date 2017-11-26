@@ -29,17 +29,14 @@ if ($_s['enable_email_verify']) {
 	$body = <<<BODY
 Thanks for registration in Geometry Dash Online Private Server! Please, activate your account.
 
-Link: http://gdops.tk/rel/geodashonline/accounts/activate.php
-
-Secret key: {$act['hash']}
-Activation code: {$act['key']}
+Link: http://gdops.tk/rel/geodashonline/accounts/activate.php?act={$act['hash']}
 
 BODY;
 
 	$email1 = array(
-		'subject' => 'Geometry Dash Online',
+		'subject' => 'Account activation',
 		'body' => $body,
-		'from' => 'noreply@geodashonline.com'
+		'from' => 'example@example.com'
 	);
 
 	$email_sent = mail($email, $email1['subject'], $email1['body'], 'From: ' . $email1['from'] . "\r\nX-Mailer: PHP/" . phpversion());

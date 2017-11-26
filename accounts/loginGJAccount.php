@@ -25,7 +25,6 @@ if ($account['actCode'] != '')
 
 if (Users::check_user_by_account($account['accountID'])) {
 	$user = Users::get_by_account($account['accountID']);
-	Users::update_udid($user['userID'], $udid);
 
 	die($account['accountID'] . ',' . $user['userID']);
 } else {

@@ -23,4 +23,4 @@ for ($i = 0; $i < 10; $i++) {
     $str .= $mp['packID'];
 }
 
-echo '#' . count($packs) . ":$page:10#" . MapPacks::generate_hash($str);
+echo '#' . count($packs) . ":".($page*10).":10#" . MapPacks::generate_hash($str);

@@ -35,6 +35,7 @@ if (!$profile) {
 	$profile['youtube'] = '';
 	$profile['twitter'] = '';
 	$profile['twitch'] = '';
+	$profile['allowCommentHistory'] = 0;
 }
 
 $q = $db->prepare("SELECT * FROM opsUserScores WHERE userID = :u");
@@ -49,9 +50,19 @@ $cur = 'Messages::count_unread';
 $fur = 'Friends::count_new';
 $frr = 'Friends::count_new_requests';
 
+$modType = 0;
+
+if (Moderation::is_mod_or_admin($targetAccountID)) {
+    if (Moderation::is_admin($targetAccountID)) {
+        $modType = 2;
+    } else if (Moderation::is_mod($targetAccountID)) {
+        $modType = 1;
+    }
+}
+
 if ($accountID == $targetAccountID) {
 	$response = <<<RESPONSE
-1:{$s['userName']}:2:{$user['userID']}:13:{$s['coins']}:17:{$s['userCoins']}:10:{$s['color1']}:11:{$s['color2']}:3:{$s['stars']}:46:{$s['diamonds']}:4:{$s['demons']}:8:{$ccp($user['userID'])}:18:{$profile['allowMessages']}:19:{$profile['allowFriendRequests']}:20:{$profile['youtube']}:21:{$s['accIcon']}:22:{$s['accShip']}:23:{$s['accBall']}:24:{$s['accBird']}:25:{$s['accDart']}:26:{$s['accRobot']}:28:{$s['accGlow']}:43:{$s['accSpider']}:47:1:30:{$ctp($user['userID'])}:16:{$user['accountID']}:31:0:44:{$profile['twitter']}:45:{$profile['twitch']}:38:{$cur($user['accountID'])}:39:{$frr($user['accountID'])}:40:{$fur($user['accountID'])}:29:1
+49:{$modType}:1:{$s['userName']}:2:{$user['userID']}:13:{$s['coins']}:17:{$s['userCoins']}:10:{$s['color1']}:11:{$s['color2']}:3:{$s['stars']}:46:{$s['diamonds']}:4:{$s['demons']}:8:{$ccp($user['userID'])}:18:{$profile['allowMessages']}:19:{$profile['allowFriendRequests']}:20:{$profile['youtube']}:21:{$s['accIcon']}:22:{$s['accShip']}:23:{$s['accBall']}:24:{$s['accBird']}:25:{$s['accDart']}:26:{$s['accRobot']}:28:{$s['accGlow']}:43:{$s['accSpider']}:47:1:30:{$ctp($user['userID'])}:16:{$user['accountID']}:31:0:44:{$profile['twitter']}:45:{$profile['twitch']}:38:{$cur($user['accountID'])}:39:{$frr($user['accountID'])}:40:{$fur($user['accountID'])}:29:1
 RESPONSE;
 
 	die($response);
@@ -68,7 +79,7 @@ RESPONSE;
 		$fStatus = 0;
 
 	$response = <<<RESPONSE
-1:{$s['userName']}:2:{$user['userID']}:13:{$s['coins']}:17:{$s['userCoins']}:10:{$s['color1']}:11:{$s['color2']}:3:{$s['stars']}:46:{$s['diamonds']}:4:{$s['demons']}:8:{$ccp($user['userID'])}:18:{$profile['allowMessages']}:19:{$profile['allowFriendRequests']}:20:{$profile['youtube']}:21:{$s['accIcon']}:22:{$s['accShip']}:23:{$s['accBall']}:24:{$s['accBird']}:25:{$s['accDart']}:26:{$s['accRobot']}:28:{$s['accGlow']}:43:{$s['accSpider']}:47:1:30:{$ctp($user['userID'])}:16:{$user['accountID']}:31:{$fStatus}:44:{$profile['twitter']}:45:{$profile['twitch']}:38:0:39:0:40:0:29:1
+50:{$profile['allowCommentHistory']}:49:{$modType}:1:{$s['userName']}:2:{$user['userID']}:13:{$s['coins']}:17:{$s['userCoins']}:10:{$s['color1']}:11:{$s['color2']}:3:{$s['stars']}:46:{$s['diamonds']}:4:{$s['demons']}:8:{$ccp($user['userID'])}:18:{$profile['allowMessages']}:19:{$profile['allowFriendRequests']}:20:{$profile['youtube']}:21:{$s['accIcon']}:22:{$s['accShip']}:23:{$s['accBall']}:24:{$s['accBird']}:25:{$s['accDart']}:26:{$s['accRobot']}:28:{$s['accGlow']}:43:{$s['accSpider']}:47:1:30:{$ctp($user['userID'])}:16:{$user['accountID']}:31:{$fStatus}:44:{$profile['twitter']}:45:{$profile['twitch']}:38:0:39:0:40:0:29:1
 RESPONSE;
 
 	die($response);

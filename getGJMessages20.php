@@ -64,4 +64,4 @@ for ($i = 0; $i < 50; $i++) {
 	$users .= $u['userID'] . ':' . $us['userName'] . ':' . $is == '1' ? $m['targetAccountID'] : $m['accountID'];
 }
 
-echo "#$users#" . count($msgs) . ":50:$page";
+echo "#$users#" . count($msgs) . ":50:".($page*50);

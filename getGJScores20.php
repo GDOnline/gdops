@@ -21,7 +21,6 @@ if ($accountID != '') {
 oplog('getGJScores', 'has been initiated by', $accountID == '' ? $udid : $accountID);
 
 $users = array();
-$max = 100;
 
 switch ($type) {
 	case 'top':
@@ -30,12 +29,10 @@ switch ($type) {
 
 	case 'friends':
 		$users = Leaderboards::get_friends_top($accountID);
-		$max = count($users);
 		break;
 
 	case 'relative':
 		$users = Leaderboards::get_relative_top($accountID == '' ? $udid : $accountID);
-		$max = 10;
 		break;
 
 	case 'creators':
@@ -46,7 +43,7 @@ switch ($type) {
 if (count($users) == 0)
 	die('-2');
 
-for ($i = 0; $i < $max; $i++) {
+for ($i = 0; $i < $_POST['count']; $i++) {
 	if ($i != 0)
 		echo '|';
 
@@ -55,8 +52,15 @@ for ($i = 0; $i < $max; $i++) {
 	if ($user == null)
 		break;
 
-	if (Users::is_banned($user['userID']))
+	if (Users::is_banned($user['userID']) && $type != 'creators' && $type != 'friends')
 		continue;
 
-	echo "1:".$user["userName"].":2:".$user["userID"].":13:".$user["coins"].":17:".$user["userCoins"].":6:".($type == 'creators' ? Users::calculate_creator_position($user['userID']) : Users::calculate_top_position($user['userID'])).":9:".$user["icon"].":10:".$user["color1"].":11:".$user["color2"].":14:".$user["iconType"].":15:".$user["special"].":16:".Users::get_by_id($user['userID'])['accountID'].":3:".$user["stars"].":8:".Users::calculate_creator_points($user['userID']).":4:".$user["demons"].":7:".Users::get_by_id($user['userID'])['accountID'].":46:".$user["diamonds"];
+	$top = 0;
+
+	if ($type != 'creators' && $type != 'friends')
+	    $top = Users::calculate_top_position($user['userID']);
+	else
+	    $top = $i + 1;
+
+	echo "1:".$user["userName"].":2:".$user["userID"].":13:".$user["coins"].":17:".$user["userCoins"].":6:".$top.":9:".$user["icon"].":10:".$user["color1"].":11:".$user["color2"].":14:".$user["iconType"].":15:".$user["special"].":16:".Users::get_by_id($user['userID'])['accountID'].":3:".$user["stars"].":8:".Users::calculate_creator_points($user['userID']).":4:".$user["demons"].":7:".Users::get_by_id($user['userID'])['accountID'].":46:".$user["diamonds"];
 }

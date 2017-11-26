@@ -34,7 +34,7 @@ for ($i = 0; $i < 10; $i++) {
 	if ($i != 0)
 		echo '|';
 
-	$f = $r[$i=$page*10];
+	$f = $r[$i+$page*10];
 
 	$u = array();
 
@@ -48,4 +48,4 @@ for ($i = 0; $i < 10; $i++) {
 	echo "1:".$user["userName"].":2:".$user["userID"].":9:".$user["icon"].":10:".$user["color1"].":11:".$user["color2"].":14:".$user["iconType"].":15:".$user["special"].":16:".$u["accountID"].":32:".$f["requestID"].":35:".$f["comment"].":41:".$f['isNew'].":37:".makeTime($f["uploadTime"]);
 }
 
-echo '#' . count($r) . ":$page:10";
+echo '#' . count($r) . ":".($page*10).":10";

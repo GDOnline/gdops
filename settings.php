@@ -3,7 +3,7 @@
 
 Geometry Dash Online Private Server
 
-Developed by: Verlemion
+Developed by: Ruppet
 Tested by: EndmaN, Zimnior12, Pooshnya, BoyOfTheCones, Monstahhh
 
 Game version: 2.1
@@ -22,15 +22,15 @@ $OPS_SETTINGS = array(
 		'security' => array(
 			'salt' => '',
 			'anubis_salt' => '',
-			'pass_algo' => 'sha512'
+			'pass_algo' => 'sha256'
 		),
         'limits' => array(
-            'messages' => 150,
-            'likes' => 5000,
-            'comments' => 100,
-            'accComments' => 50,
-            'levels' => 10,
-            'rates' => 5000
+            'messages' => 9999,
+            'likes' => 9999,
+            'comments' => 9999,
+            'accComments' => 9999,
+            'levels' => 9999,
+            'rates' => 9999
         )
 	),
 	'anticheat' => array(
@@ -42,7 +42,7 @@ $OPS_SETTINGS = array(
 	),
 	'database' => array(
 		'server' => 'localhost',
-		'username' => '',
+		'username' => 'root',
 		'password' => '',
 		'dbname' => ''
 	),
