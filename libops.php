@@ -2,7 +2,7 @@
 error_reporting(E_ERROR);
 
 function unparty($str) {
-	return str_replace(array("'", "(", ")", "~", ":", '|'), "", $str);
+	return trim(stripslashes(str_replace(array("'", "(", ")", "~", ":", '|'), "", $str)));
 }
 
 function blank(...$strs) {
